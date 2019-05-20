@@ -106,6 +106,7 @@ std::vector<double> CustomPredictionStrategy::weighted_kaplan_meier(std::vector<
   // Step function for new timepoints
   std::vector<double> result(timepoints.size());
   for (size_t i = 0; i < timepoints.size(); ++i) {
+    result[i] = 1;
     for (size_t j = 0; j < time_sorted.size(); ++j) {
       if (timepoints[i] >= time_sorted[j]) {
         result[i] = survival[j];
