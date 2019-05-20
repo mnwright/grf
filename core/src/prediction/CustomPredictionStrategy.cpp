@@ -60,31 +60,36 @@ std::vector<double> CustomPredictionStrategy::compute_variance(
 }
 
 std::vector<double> CustomPredictionStrategy::weighted_kaplan_meier(std::vector<double> time, std::vector<double> status,
-                                          std::vector<double> weights) {
+                                                                    std::vector<double> weights) {
   
-  size_t n = time.size();             
-  size_t num_timepoints = timepoints.size();            
+  size_t n = time.size();
+  
+  // Sort unique time points to evaluate at
+  std::vector<double> time_sorted = time;
+  std::sort(time_sorted.begin(), time_sorted.end() );
+  time_sorted.erase(std::unique(time_sorted.begin(), time_sorted.end()), time_sorted.end());
+  size_t num_timepoints = time_sorted.size();            
   
   // Compute at risk and events for each timepoint
   std::vector<double> at_risk(num_timepoints);
   std::vector<double> death(num_timepoints);
   for (size_t i = 0; i < n; ++i) {
-      double survival_time = time[i];
-      for(size_t j = 0; j < num_timepoints; ++j) {
-        if (survival_time >= timepoints[j]) {
-          at_risk[j] += weights[i];
-        } else if (status[i] == 0) {
-          break;
-        } else if (status[i] == 1) {
-          at_risk[j] += weights[i];
-        }
-        
-        if (status[i] == 1 && survival_time <= timepoints[j]) {
-          death[j] += weights[i];
-          break;
-        }
+    double survival_time = time[i];
+    for(size_t j = 0; j < num_timepoints; ++j) {
+      if (survival_time >= time_sorted[j]) {
+        at_risk[j] += weights[i];
+      } else if (status[i] == 0) {
+        break;
+      } else if (status[i] == 1) {
+        at_risk[j] += weights[i];
       }
-  } 
+      
+      if (status[i] == 1 && survival_time <= time_sorted[j]) {
+        death[j] += weights[i];
+        break;
+      }
+    }
+  }
   
   // Compute KM estimator 
   std::vector<double> survival(num_timepoints);
@@ -98,5 +103,17 @@ std::vector<double> CustomPredictionStrategy::weighted_kaplan_meier(std::vector<
     }
   }
   
-  return survival;
+  // Step function for new timepoints
+  std::vector<double> result(timepoints.size());
+  for (size_t i = 0; i < timepoints.size(); ++i) {
+    for (size_t j = 0; j < time_sorted.size(); ++j) {
+      if (timepoints[i] >= time_sorted[j]) {
+        result[i] = survival[j];
+      } else {
+        break;
+      }
+    }
+  }
+  
+  return result;
 }
